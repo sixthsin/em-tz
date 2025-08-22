@@ -1,8 +1,10 @@
 package main
 
 import (
+	"log"
 	"sub-aggregator/cfg"
-	"sub-aggregator/internal/subaggr"
+	"sub-aggregator/internal/subs"
+	"sub-aggregator/migrations"
 	"sub-aggregator/pkg/db"
 
 	"github.com/gin-gonic/gin"
@@ -12,16 +14,22 @@ func main() {
 	conf := cfg.LoadConfig()
 	database := db.NewDb(conf)
 
+	migrations.AutoMigrate()
+
 	gin.SetMode(gin.DebugMode)
 	router := gin.Default()
 
-	repo := subaggr.NewRepository(database)
-	serv := subaggr.NewService(&subaggr.ServiceDeps{
+	repo := subs.NewRepository(database)
+	serv := subs.NewService(&subs.ServiceDeps{
 		Repository: repo,
 	})
 
-	subaggr.NewHandler(router, &subaggr.HandlerDeps{
+	subs.NewHandler(router, &subs.HandlerDeps{
 		Config:  conf,
 		Service: serv,
 	})
+
+	if err := router.Run(conf.Server.Port); err != nil {
+		log.Printf("Failed to start server: %v", err)
+	}
 }

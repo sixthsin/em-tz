@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: subaggr-postgres
+    environment:
+      POSTGRES_DB: subaggr
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - subaggr-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: subaggr-app
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: subaggr
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      APP_PORT: 8080
+      DSN: "host=postgres user=postgres password=postgres dbname=subaggr port=5432 sslmode=disable"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./configs:/app/configs:ro
+    command: ["./sub-aggregator"]
+    networks:
+      - subaggr-network
+
+volumes:
+  postgres_data:
+
+networks:
+  subaggr-network:
+    driver: bridge
