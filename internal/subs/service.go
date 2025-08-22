@@ -14,7 +14,7 @@ func NewService(deps *ServiceDeps) *Service {
 	}
 }
 
-func (s *Service) Create(requestData CreateSubscriptionRequest) error {
+func (s *Service) Create(requestData SubscriptionRequest) error {
 	subscription := &Subscription{
 		ServiceName: requestData.ServiceName,
 		Price:       requestData.Price,
@@ -45,4 +45,21 @@ func (s *Service) GetById(id uint) (*Subscription, error) {
 	}
 
 	return foundedSub, nil
+}
+
+func (s *Service) Update(id uint, requestData SubscriptionRequest) (*Subscription, error) {
+	subscription := &Subscription{
+		ServiceName: requestData.ServiceName,
+		Price:       requestData.Price,
+		UserID:      requestData.UserID,
+		StartDate:   requestData.StartDate,
+		EndDate:     requestData.EndDate,
+	}
+
+	updatedSubscription, err := s.Repository.Update(id, subscription)
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedSubscription, nil
 }

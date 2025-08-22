@@ -43,3 +43,29 @@ func (r *Repository) GetById(id uint) (*Subscription, error) {
 	err := r.Database.First(&sub, id).Error
 	return &sub, err
 }
+
+func (r *Repository) Update(id uint, subscriptionUpdate *Subscription) (*Subscription, error) {
+	var updatedSubscription Subscription
+	err := r.Database.DB.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&Subscription{}).
+			Where("id = ?", id).
+			Omit("id").
+			Updates(subscriptionUpdate)
+
+		if res.Error != nil {
+			return res.Error
+		}
+
+		if res.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+
+		return tx.First(&updatedSubscription, id).Error
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &updatedSubscription, nil
+}
