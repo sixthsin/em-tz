@@ -1,5 +1,9 @@
 package subs
 
+import (
+	"fmt"
+)
+
 type ServiceDeps struct {
 	Repository *Repository
 }
@@ -18,7 +22,7 @@ func (s *Service) Create(requestData SubscriptionRequest) error {
 	subscription := &Subscription{
 		ServiceName: requestData.ServiceName,
 		Price:       requestData.Price,
-		UserID:      requestData.UserID,
+		UserId:      requestData.UserId,
 		StartDate:   requestData.StartDate,
 		EndDate:     requestData.EndDate,
 	}
@@ -51,7 +55,7 @@ func (s *Service) Update(id uint, requestData SubscriptionRequest) (*Subscriptio
 	subscription := &Subscription{
 		ServiceName: requestData.ServiceName,
 		Price:       requestData.Price,
-		UserID:      requestData.UserID,
+		UserId:      requestData.UserId,
 		StartDate:   requestData.StartDate,
 		EndDate:     requestData.EndDate,
 	}
@@ -62,4 +66,44 @@ func (s *Service) Update(id uint, requestData SubscriptionRequest) (*Subscriptio
 	}
 
 	return updatedSubscription, nil
+}
+
+func (s *Service) UpdatePartially(id uint, requestData *PatchSubscriptionRequest) (*Subscription, error) {
+	subscriptionUpdate := &Subscription{}
+
+	if requestData.ServiceName != nil {
+		subscriptionUpdate.ServiceName = *requestData.ServiceName
+	}
+	if requestData.Price != nil {
+		subscriptionUpdate.Price = *requestData.Price
+	}
+	if requestData.UserId != nil {
+		subscriptionUpdate.UserId = *requestData.UserId
+	}
+	if requestData.StartDate != nil {
+		subscriptionUpdate.StartDate = *requestData.StartDate
+	}
+	if requestData.EndDate != nil {
+		subscriptionUpdate.EndDate = *requestData.EndDate
+	}
+
+	updatedSubscription, err := s.Repository.Update(id, subscriptionUpdate)
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedSubscription, nil
+}
+
+func (s *Service) GetWithParams(limit, offset int, filters SearchParams) ([]Subscription, error) {
+	return s.Repository.GetWithParams(limit, offset, filters), nil
+}
+
+func (s *Service) GetSummary(filters SearchParams) (uint, error) {
+	total, err := s.Repository.GetSummary(filters.StartDate, filters.EndDate, filters.UserId, filters.ServiceName)
+	if err != nil {
+		return 0, fmt.Errorf("failed to calculate total amount: %w", err)
+	}
+
+	return total, nil
 }

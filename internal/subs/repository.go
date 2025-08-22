@@ -3,6 +3,7 @@ package subs
 import (
 	"sub-aggregator/pkg/db"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -68,4 +69,45 @@ func (r *Repository) Update(id uint, subscriptionUpdate *Subscription) (*Subscri
 	}
 
 	return &updatedSubscription, nil
+}
+
+func (r *Repository) GetWithParams(limit, offset int, filters SearchParams) []Subscription {
+	var foundSubs []Subscription
+	query := r.Database.DB.Model(&Subscription{})
+
+	if filters.ServiceName != nil {
+		query = query.Where("service_name LIKE ?", "%"+*filters.ServiceName+"%")
+	}
+	if filters.UserId != nil {
+		query = query.Where("user_id = ?", filters.UserId)
+	}
+	if filters.StartDate != "" && filters.EndDate != "" {
+		query = query.Where("start_date BETWEEN ? AND ?", filters.StartDate, filters.EndDate)
+	}
+
+	query.Limit(limit).Offset(offset).Find(&foundSubs)
+
+	return foundSubs
+}
+
+func (r *Repository) GetSummary(startDate, endDate string, userId *uuid.UUID, serviceName *string) (uint, error) {
+	var total struct {
+		Total uint `gorm:"column:total_amount"`
+	}
+
+	query := r.Database.DB.Model(&Subscription{}).
+		Select("COALESCE(SUM(price), 0) as total_amount").
+		Where("start_date BETWEEN ? AND ?", endDate, startDate)
+	if userId != nil {
+		query = query.Where("user_id = ?", *userId)
+	}
+	if serviceName != nil {
+		query = query.Where("service_name = ?", *serviceName)
+	}
+
+	if err := query.Scan(&total).Error; err != nil {
+		return 0, err
+	}
+
+	return total.Total, nil
 }
